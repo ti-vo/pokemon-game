@@ -12,9 +12,11 @@ export async function fetchPokemonList() {
   return response.json();
 }
 
-export async function attemptCatch(pokemonId) {
+export async function attemptCatch(pokemonId, ballType) {
   const response = await fetch(`${API_BASE}/pokemon/${pokemonId}/catch`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ballType }),
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));

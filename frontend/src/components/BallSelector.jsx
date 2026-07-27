@@ -21,6 +21,31 @@ function formatCountdown(totalSeconds) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+// A simplified version of the same ball design (no per-type decorations —
+// too fine-grained to read at cursor size), encoded as a cursor image.
+const CURSOR_SIZE = 32;
+const CURSOR_HOTSPOT = CURSOR_SIZE / 2;
+
+function buildBallCursorDataUri(ballId) {
+  const topColor = encodeURIComponent(BALL_TOP_COLORS[ballId]);
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='${CURSOR_SIZE}' height='${CURSOR_SIZE}' viewBox='0 0 100 100'>` +
+    `<circle cx='50' cy='50' r='46' fill='%23ffffff' stroke='%231a1a1a' stroke-width='6'/>` +
+    `<path d='M 4 50 A 46 46 0 0 1 96 50 Z' fill='${topColor}' stroke='%231a1a1a' stroke-width='6' stroke-linejoin='round'/>` +
+    `<rect x='4' y='44' width='92' height='12' fill='%231a1a1a'/>` +
+    `<circle cx='50' cy='50' r='11' fill='%23ffffff' stroke='%231a1a1a' stroke-width='6'/>` +
+    `</svg>`;
+  return `data:image/svg+xml,${svg}`;
+}
+
+// CSS `cursor` value showing the selected ball as the pointer, with a plain
+// crosshair fallback for browsers that reject the custom cursor image.
+export function getBallCursor(ballId) {
+  if (!BALL_TOP_COLORS[ballId]) return "crosshair";
+  const dataUri = buildBallCursorDataUri(ballId);
+  return `url("${dataUri}") ${CURSOR_HOTSPOT} ${CURSOR_HOTSPOT}, crosshair`;
+}
+
 // A ball icon: a circle split by a black band, colored top half / white
 // bottom half, plus a white-and-black "button" centered on the band.
 function BallIcon({ ballId }) {

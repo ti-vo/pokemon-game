@@ -7,6 +7,21 @@ const db = require("../db");
 
 const router = express.Router();
 
+// Ball types and how each modifies the base catch_rate. Masterball always
+// succeeds; Superball boosts the chance by a fixed multiplier; Pokeball uses
+// the chance as-is.
+const SUPERBALL_MULTIPLIER = 1.5;
+
+const BALL_TYPES = new Set(["pokeball", "superball", "masterball"]);
+
+function effectiveCatchChance(baseCatchRate, ballType) {
+  if (ballType === "masterball") return 1;
+  if (ballType === "superball") {
+    return Math.min(1, baseCatchRate * SUPERBALL_MULTIPLIER);
+  }
+  return baseCatchRate;
+}
+
 // Ensure every pokemon has a corresponding catches row (attempts=0, caught=0)
 // so the join below always returns a status, even before any attempt was made.
 function ensureCatchRow(pokemonId) {
@@ -71,6 +86,11 @@ router.get("/", (req, res) => {
 // POST /api/pokemon/:id/catch
 router.post("/:id/catch", (req, res) => {
   const pokemonId = Number(req.params.id);
+  const ballType = req.body?.ballType ?? "pokeball";
+
+  if (!BALL_TYPES.has(ballType)) {
+    return res.status(400).json({ error: `Unknown ball type: ${ballType}` });
+  }
 
   const pokemon = db
     .prepare("SELECT * FROM pokemon WHERE id = ?")
@@ -90,8 +110,9 @@ router.post("/:id/catch", (req, res) => {
     return res.status(400).json({ error: "Pokemon is already caught" });
   }
 
+  const catchChance = effectiveCatchChance(pokemon.catch_rate, ballType);
   const roll = Math.random();
-  const success = roll < pokemon.catch_rate;
+  const success = roll < catchChance;
 
   if (success) {
     db.prepare(
@@ -107,7 +128,9 @@ router.post("/:id/catch", (req, res) => {
 
   res.json({
     success,
+    ballType,
     catchRate: pokemon.catch_rate,
+    catchChance,
     roll,
     stats: success && pokemon.stats ? JSON.parse(pokemon.stats) : null,
   });

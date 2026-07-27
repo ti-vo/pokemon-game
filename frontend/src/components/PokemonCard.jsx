@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   t,
   translateType,
@@ -35,32 +34,7 @@ const TYPE_COLORS = {
 // rarely exceed this). Values above it just fill the bar completely.
 const STAT_BAR_CAP = 120;
 
-export default function PokemonCard({
-  pokemon,
-  language,
-  onCatchClick,
-  onCatchAttempt,
-}) {
-  const [isRolling, setIsRolling] = useState(false);
-  const [lastResult, setLastResult] = useState(null); // "success" | "fail" | null
-
-  // Not called anymore now that the button opens the Wildzone instead of
-  // rolling directly — kept here to be lifted into the Wildzone's real catch
-  // logic later.
-  async function handleCatchClick() {
-    setIsRolling(true);
-    setLastResult(null);
-    try {
-      const result = await onCatchAttempt(pokemon.id);
-      setLastResult(result.success ? "success" : "fail");
-    } finally {
-      setIsRolling(false);
-      // Clear the "escaped" message after a moment so the card can be
-      // tried again without a stale message lingering.
-      setTimeout(() => setLastResult(null), 1500);
-    }
-  }
-
+export default function PokemonCard({ pokemon, language, onCatchClick }) {
   return (
     <div className={`pokemon-card ${pokemon.caught ? "is-caught" : ""}`}>
       <div className="pokemon-card__sprite-wrap">
@@ -90,12 +64,8 @@ export default function PokemonCard({
       {pokemon.caught ? (
         <p className="pokemon-card__status">{t(language, "caughtStatus")}</p>
       ) : (
-        <button
-          className="pokemon-card__catch-button"
-          onClick={onCatchClick}
-          disabled={isRolling}
-        >
-          {isRolling ? "..." : t(language, "catchButton")}
+        <button className="pokemon-card__catch-button" onClick={onCatchClick}>
+          {t(language, "catchButton")}
         </button>
       )}
 
@@ -121,17 +91,6 @@ export default function PokemonCard({
             </div>
           ))}
         </div>
-      )}
-
-      {lastResult === "fail" && (
-        <p className="pokemon-card__feedback pokemon-card__feedback--fail">
-          {t(language, "escaped")}
-        </p>
-      )}
-      {lastResult === "success" && (
-        <p className="pokemon-card__feedback pokemon-card__feedback--success">
-          {t(language, "caught")}
-        </p>
       )}
 
       <p className="pokemon-card__attempts">

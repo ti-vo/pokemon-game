@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { getPokemonName } from "../i18n.js";
-import BallSelector from "./BallSelector.jsx";
+import { getPokemonName, t } from "../i18n.js";
+import BallSelector, { getBallCursor } from "./BallSelector.jsx";
+
+const CATCH_FEEDBACK_DURATION_MS = 2000;
 
 const MAX_CREATURES = 2;
 const SPRITE_SIZE = 56;
@@ -213,12 +215,15 @@ export default function WildZone({
   selectedBall,
   onSelectBall,
   secondsUntilRefill,
+  onThrowBall,
+  onMissBall,
 }) {
   const zoneRef = useRef(null);
   const [zoneSize, setZoneSize] = useState({ width: 0, height: 0 });
   const [creatures, setCreatures] = useState(
     new Array(MAX_CREATURES).fill(null)
   );
+  const [lastResult, setLastResult] = useState(null); // { message, success } | null
 
   const uncaughtRef = useRef([]);
   uncaughtRef.current = pokemonList.filter((p) => !p.caught);
@@ -228,6 +233,62 @@ export default function WildZone({
   // frame for rendering, so the render path never has to be an updater
   // function with side effects in it.
   const slotsRef = useRef(new Array(MAX_CREATURES).fill(null));
+
+  // Set by the simulation effect below so the click handler (which lives
+  // outside that effect) can trigger the same respawn scheduling.
+  const scheduleRespawnRef = useRef(() => {});
+  const feedbackTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    };
+  }, []);
+
+  const canThrow = Boolean(selectedBall) && (ballCounts[selectedBall] ?? 0) > 0;
+
+  function showFeedback(message, success) {
+    setLastResult({ message, success });
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    feedbackTimeoutRef.current = setTimeout(
+      () => setLastResult(null),
+      CATCH_FEEDBACK_DURATION_MS
+    );
+  }
+
+  function handleSpriteClick(event, creature) {
+    // Stop this from also bubbling up to the zone's own click handler,
+    // which would otherwise count a hit as a miss too.
+    event.stopPropagation();
+    if (!canThrow) return;
+
+    const slotIndex = slotsRef.current.findIndex(
+      (c) => c && c.instanceId === creature.instanceId
+    );
+    if (slotIndex === -1) return;
+
+    // The Pokemon leaves the Wildzone the instant it's thrown at, win or
+    // lose — the ball's own count is decremented in App.jsx regardless too.
+    slotsRef.current[slotIndex] = null;
+    setCreatures([...slotsRef.current]);
+    scheduleRespawnRef.current(slotIndex, creature.pokemon.id);
+
+    const pokemonName = getPokemonName(language, creature.pokemon);
+    onThrowBall(creature.pokemon, selectedBall).then((result) => {
+      showFeedback(
+        `${pokemonName}: ${t(language, result.success ? "caught" : "escaped")}`,
+        result.success
+      );
+    });
+  }
+
+  function handleZoneClick() {
+    // A click that reaches here (rather than being stopped by a sprite's
+    // own handler) missed every Pokemon currently in the zone.
+    if (!canThrow) return;
+    onMissBall(selectedBall);
+    showFeedback(t(language, "missedThrow"), false);
+  }
 
   useEffect(() => {
     const element = zoneRef.current;
@@ -269,6 +330,8 @@ export default function WildZone({
         );
       }, randomRespawnDelay());
     }
+
+    scheduleRespawnRef.current = scheduleRespawn;
 
     slotsRef.current = new Array(MAX_CREATURES).fill(null);
     for (let slot = 0; slot < MAX_CREATURES; slot++) {
@@ -352,6 +415,7 @@ export default function WildZone({
     return () => {
       cancelAnimationFrame(frameId);
       respawnTimeouts.forEach((id) => id && clearTimeout(id));
+      scheduleRespawnRef.current = () => {};
     };
   }, [zoneSize]);
 
@@ -365,7 +429,12 @@ export default function WildZone({
         secondsUntilRefill={secondsUntilRefill}
       />
 
-      <div className="wild-zone" ref={zoneRef}>
+      <div
+        className="wild-zone"
+        ref={zoneRef}
+        onClick={handleZoneClick}
+        style={canThrow ? { cursor: getBallCursor(selectedBall) } : undefined}
+      >
         <div className="wild-zone__zone wild-zone__zone--sky" />
         <div className="wild-zone__zone wild-zone__zone--grass" />
         <div className="wild-zone__zone wild-zone__zone--water" />
@@ -375,14 +444,31 @@ export default function WildZone({
             creature && (
               <img
                 key={creature.instanceId}
-                className="wild-zone__sprite"
+                className={`wild-zone__sprite ${
+                  canThrow ? "wild-zone__sprite--catchable" : ""
+                }`}
                 src={creature.pokemon.spriteUrl}
                 alt={getPokemonName(language, creature.pokemon)}
+                onClick={
+                  canThrow ? (event) => handleSpriteClick(event, creature) : undefined
+                }
                 style={{
                   transform: `translate(${creature.x}px, ${creature.y}px)`,
                 }}
               />
             )
+        )}
+
+        {lastResult && (
+          <p
+            className={`wild-zone__feedback ${
+              lastResult.success
+                ? "wild-zone__feedback--success"
+                : "wild-zone__feedback--fail"
+            }`}
+          >
+            {lastResult.message}
+          </p>
         )}
       </div>
     </div>

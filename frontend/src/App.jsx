@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchPokemonList } from "./api.js";
+import { fetchPokemonList, attemptCatch } from "./api.js";
 import PokemonCard from "./components/PokemonCard.jsx";
 import WildZone from "./components/WildZone.jsx";
 import { INITIAL_BALL_COUNTS } from "./components/BallSelector.jsx";
@@ -49,6 +49,41 @@ export default function App() {
 
   function handleCatchButtonClick() {
     setView("wildzone");
+  }
+
+  function consumeBall(ballType) {
+    setBallCounts((current) => ({
+      ...current,
+      [ballType]: Math.max(0, current[ballType] - 1),
+    }));
+  }
+
+  async function handleThrowBall(pokemon, ballType) {
+    // The ball is used up immediately, win or lose.
+    consumeBall(ballType);
+
+    const result = await attemptCatch(pokemon.id, ballType);
+
+    setPokemonList((current) =>
+      current.map((p) =>
+        p.id === pokemon.id
+          ? {
+              ...p,
+              caught: result.success ? true : p.caught,
+              stats: result.success ? result.stats : p.stats,
+              attempts: p.attempts + 1,
+            }
+          : p
+      )
+    );
+
+    return result;
+  }
+
+  function handleMissBall(ballType) {
+    // Clicked in the Wildzone without hitting any Pokemon — the ball is
+    // still spent, there's just no catch attempt to record.
+    consumeBall(ballType);
   }
 
   const caughtCount = pokemonList.filter((p) => p.caught).length;
@@ -120,6 +155,8 @@ export default function App() {
           selectedBall={selectedBall}
           onSelectBall={setSelectedBall}
           secondsUntilRefill={secondsUntilRefill}
+          onThrowBall={handleThrowBall}
+          onMissBall={handleMissBall}
         />
       )}
 

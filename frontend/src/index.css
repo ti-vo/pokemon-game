@@ -227,6 +227,42 @@ body {
   z-index: 1;
 }
 
+.wild-zone__sprite--catchable {
+  pointer-events: auto;
+  /* No cursor here on purpose — inherit the ball cursor set on .wild-zone
+     instead of the browser's default pointing-hand. */
+  transition: filter 0.1s ease;
+}
+
+.wild-zone__sprite--catchable:hover {
+  /* transform is already driven inline (position), so the hover cue has to
+     be a property inline styles don't touch — a glow via filter. */
+  filter: drop-shadow(0 0 6px var(--color-caught)) drop-shadow(0 0 3px var(--color-caught));
+}
+
+.wild-zone__feedback {
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  margin: 0;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.8rem;
+  background: rgba(23, 20, 31, 0.75);
+}
+
+.wild-zone__feedback--success {
+  color: var(--color-caught);
+}
+
+.wild-zone__feedback--fail {
+  color: var(--color-accent);
+}
+
 .app__header-right {
   display: flex;
   align-items: center;
