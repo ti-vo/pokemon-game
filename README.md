@@ -10,6 +10,11 @@ harder to catch). Later on: More realistic "catching" using Pokéball
 ![React](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB)
 ![SQLite](https://img.shields.io/badge/database-SQLite-003B57)
 
+## Demo
+ 
+![Demo of the Pokemon Catch Tracker](./docs/demo.gif)
+
+
 ## Features
 
 - Pokemon grid with sprites, names, and type badges
