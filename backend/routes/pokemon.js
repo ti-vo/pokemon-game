@@ -45,12 +45,15 @@ router.get("/", (req, res) => {
          p.name,
          p.name_de,
          p.sprite_url,
+         p.artwork_url,
+         p.home_url,
          p.types,
          p.catch_rate,
          p.stats,
          COALESCE(c.caught, 0) AS caught,
          COALESCE(c.attempts, 0) AS attempts,
-         c.caught_at
+         c.caught_at,
+         c.ball_type
        FROM pokemon p
        LEFT JOIN catches c ON c.pokemon_id = p.id
        ORDER BY p.id ASC`
@@ -65,6 +68,8 @@ router.get("/", (req, res) => {
       name: row.name,
       nameDe: row.name_de,
       spriteUrl: row.sprite_url,
+      artworkUrl: row.artwork_url,
+      homeUrl: row.home_url,
       types: row.types ? row.types.split(",") : [],
       catchRate: row.catch_rate,
       // Speed is exposed even before catching — the Wildzone uses it to
@@ -73,10 +78,11 @@ router.get("/", (req, res) => {
       caught: !!row.caught,
       attempts: row.attempts,
       caughtAt: row.caught_at,
-      // The rest of the stats are only revealed once the Pokemon has been
-      // caught — matches the "you don't know its stats until you've caught
-      // it" flavor.
+      // The rest of the stats (and which ball caught it) are only revealed
+      // once the Pokemon has been caught — matches the "you don't know its
+      // stats until you've caught it" flavor.
       stats: row.caught ? parsedStats : null,
+      ballType: row.caught ? row.ball_type : null,
     };
   });
 
@@ -117,9 +123,9 @@ router.post("/:id/catch", (req, res) => {
   if (success) {
     db.prepare(
       `UPDATE catches
-       SET caught = 1, attempts = attempts + 1, caught_at = CURRENT_TIMESTAMP
+       SET caught = 1, attempts = attempts + 1, caught_at = CURRENT_TIMESTAMP, ball_type = ?
        WHERE pokemon_id = ?`
-    ).run(pokemonId);
+    ).run(ballType, pokemonId);
   } else {
     db.prepare(
       `UPDATE catches SET attempts = attempts + 1 WHERE pokemon_id = ?`

@@ -26,6 +26,10 @@ const STRINGS = {
     ball_superball: "Superball",
     ball_masterball: "Masterball",
     nextRefillIn: (formatted) => `Next refill in ${formatted}`,
+    settings: "Settings",
+    close: "Close",
+    speedLabel: (multiplier) => `Pokemon speed: ${multiplier}×`,
+    refillIntervalLabel: "Ball refill every",
     stats: {
       hp: "HP",
       attack: "Attack",
@@ -61,6 +65,10 @@ const STRINGS = {
     ball_superball: "Superball",
     ball_masterball: "Masterball",
     nextRefillIn: (formatted) => `Nächste Auffüllung in ${formatted}`,
+    settings: "Einstellungen",
+    close: "Schließen",
+    speedLabel: (multiplier) => `Pokémon-Geschwindigkeit: ${multiplier}×`,
+    refillIntervalLabel: "Bälle füllen sich auf alle",
     stats: {
       hp: "KP",
       attack: "Angriff",

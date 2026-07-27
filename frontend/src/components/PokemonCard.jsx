@@ -1,42 +1,32 @@
-import {
-  t,
-  translateType,
-  getPokemonName,
-  getStatLabel,
-  getStatDescription,
-} from "../i18n.js";
+import { t, translateType, getPokemonName } from "../i18n.js";
+import { TYPE_COLORS } from "../typeColors.js";
+import { BallIcon } from "./BallSelector.jsx";
 
-// Classic Pokemon type colors, used for the small type badges.
-// Not every type is needed for the first 20 Pokemon, but keeping the full
-// map means new imports (more Pokemon later) won't need any code changes.
-const TYPE_COLORS = {
-  normal: "#A8A77A",
-  fire: "#EE8130",
-  water: "#6390F0",
-  electric: "#F7D02C",
-  grass: "#7AC74C",
-  ice: "#96D9D6",
-  fighting: "#C22E28",
-  poison: "#A33EA1",
-  ground: "#E2BF65",
-  flying: "#A98FF3",
-  psychic: "#F95587",
-  bug: "#A6B91A",
-  rock: "#B6A136",
-  ghost: "#735797",
-  dragon: "#6F35FC",
-  dark: "#705746",
-  steel: "#B7B7CE",
-  fairy: "#D685AD",
-};
+export default function PokemonCard({ pokemon, language, onCatchClick, onOpenDetail }) {
+  const isClickableForDetail = pokemon.caught && Boolean(onOpenDetail);
 
-// Rough cap used to size the stat bars (base stats among early Pokemon
-// rarely exceed this). Values above it just fill the bar completely.
-const STAT_BAR_CAP = 120;
+  function handleCardClick() {
+    if (isClickableForDetail) onOpenDetail(pokemon);
+  }
 
-export default function PokemonCard({ pokemon, language, onCatchClick }) {
+  function handleCardKeyDown(event) {
+    if (!isClickableForDetail) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onOpenDetail(pokemon);
+    }
+  }
+
   return (
-    <div className={`pokemon-card ${pokemon.caught ? "is-caught" : ""}`}>
+    <div
+      className={`pokemon-card ${pokemon.caught ? "is-caught" : ""} ${
+        isClickableForDetail ? "is-clickable" : ""
+      }`}
+      onClick={isClickableForDetail ? handleCardClick : undefined}
+      onKeyDown={isClickableForDetail ? handleCardKeyDown : undefined}
+      role={isClickableForDetail ? "button" : undefined}
+      tabIndex={isClickableForDetail ? 0 : undefined}
+    >
       <div className="pokemon-card__sprite-wrap">
         <img
           className="pokemon-card__sprite"
@@ -62,35 +52,17 @@ export default function PokemonCard({ pokemon, language, onCatchClick }) {
       </div>
 
       {pokemon.caught ? (
-        <p className="pokemon-card__status">{t(language, "caughtStatus")}</p>
+        <p className="pokemon-card__status">
+          {pokemon.ballType && <BallIcon ballId={pokemon.ballType} size={18} />}
+          {t(language, "caughtStatus")}
+        </p>
       ) : (
-        <button className="pokemon-card__catch-button" onClick={onCatchClick}>
+        <button
+          className="pokemon-card__catch-button"
+          onClick={onCatchClick}
+        >
           {t(language, "catchButton")}
         </button>
-      )}
-
-      {pokemon.caught && pokemon.stats && (
-        <div className="pokemon-card__stats">
-          {Object.entries(pokemon.stats).map(([statKey, value]) => (
-            <div key={statKey} className="pokemon-card__stat-row">
-              <span
-                className="pokemon-card__stat-label"
-                title={getStatDescription(language, statKey)}
-              >
-                {getStatLabel(language, statKey)}
-              </span>
-              <span className="pokemon-card__stat-bar-track">
-                <span
-                  className="pokemon-card__stat-bar-fill"
-                  style={{
-                    width: `${Math.min(100, (value / STAT_BAR_CAP) * 100)}%`,
-                  }}
-                />
-              </span>
-              <span className="pokemon-card__stat-value">{value}</span>
-            </div>
-          ))}
-        </div>
       )}
 
       <p className="pokemon-card__attempts">

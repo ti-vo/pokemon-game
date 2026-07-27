@@ -48,13 +48,15 @@ export function getBallCursor(ballId) {
 
 // A ball icon: a circle split by a black band, colored top half / white
 // bottom half, plus a white-and-black "button" centered on the band.
-function BallIcon({ ballId }) {
+// Exported so other components (caught-card badge, detail modal) can show
+// which ball a Pokemon was caught with, using the same visual design.
+export function BallIcon({ ballId, size = 28 }) {
   return (
     <svg
       className="ball-selector__icon"
       viewBox="0 0 100 100"
-      width="28"
-      height="28"
+      width={size}
+      height={size}
       aria-hidden="true"
       focusable="false"
     >

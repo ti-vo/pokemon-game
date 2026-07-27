@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchPokemonList, attemptCatch } from "./api.js";
 import PokemonCard from "./components/PokemonCard.jsx";
+import PokemonDetailModal from "./components/PokemonDetailModal.jsx";
 import WildZone from "./components/WildZone.jsx";
 import { INITIAL_BALL_COUNTS } from "./components/BallSelector.jsx";
+import SettingsMenu, {
+  DEFAULT_SPEED_MULTIPLIER,
+  DEFAULT_BALL_REFILL_INTERVAL_MS,
+} from "./components/SettingsMenu.jsx";
 import { LANGUAGES, t } from "./i18n.js";
-
-const BALL_REFILL_INTERVAL_MS = 10 * 60 * 1000;
 
 export default function App() {
   const [pokemonList, setPokemonList] = useState([]);
@@ -13,15 +16,25 @@ export default function App() {
   const [loadError, setLoadError] = useState(null);
   const [language, setLanguage] = useState("en");
   const [view, setView] = useState("gallery"); // "gallery" | "wildzone"
+  const [detailPokemonId, setDetailPokemonId] = useState(null);
 
   // Ball counts and the refill countdown live here (not in WildZone) so they
   // keep running whether or not the Wildzone tab is currently mounted.
   const [ballCounts, setBallCounts] = useState(INITIAL_BALL_COUNTS);
   const [selectedBall, setSelectedBall] = useState("pokeball");
-  const [secondsUntilRefill, setSecondsUntilRefill] = useState(
-    BALL_REFILL_INTERVAL_MS / 1000
+  const [ballRefillIntervalMs, setBallRefillIntervalMs] = useState(
+    DEFAULT_BALL_REFILL_INTERVAL_MS
   );
-  const nextRefillAtRef = useRef(Date.now() + BALL_REFILL_INTERVAL_MS);
+  const [secondsUntilRefill, setSecondsUntilRefill] = useState(
+    DEFAULT_BALL_REFILL_INTERVAL_MS / 1000
+  );
+  const nextRefillAtRef = useRef(Date.now() + DEFAULT_BALL_REFILL_INTERVAL_MS);
+  const ballRefillIntervalMsRef = useRef(DEFAULT_BALL_REFILL_INTERVAL_MS);
+  ballRefillIntervalMsRef.current = ballRefillIntervalMs;
+
+  const [speedMultiplier, setSpeedMultiplier] = useState(
+    DEFAULT_SPEED_MULTIPLIER
+  );
 
   useEffect(() => {
     fetchPokemonList()
@@ -35,8 +48,8 @@ export default function App() {
       const remainingMs = nextRefillAtRef.current - Date.now();
       if (remainingMs <= 0) {
         setBallCounts({ ...INITIAL_BALL_COUNTS });
-        nextRefillAtRef.current = Date.now() + BALL_REFILL_INTERVAL_MS;
-        setSecondsUntilRefill(BALL_REFILL_INTERVAL_MS / 1000);
+        nextRefillAtRef.current = Date.now() + ballRefillIntervalMsRef.current;
+        setSecondsUntilRefill(ballRefillIntervalMsRef.current / 1000);
       } else {
         setSecondsUntilRefill(Math.ceil(remainingMs / 1000));
       }
@@ -71,6 +84,7 @@ export default function App() {
               ...p,
               caught: result.success ? true : p.caught,
               stats: result.success ? result.stats : p.stats,
+              ballType: result.success ? result.ballType : p.ballType,
               attempts: p.attempts + 1,
             }
           : p
@@ -86,7 +100,16 @@ export default function App() {
     consumeBall(ballType);
   }
 
+  function handleBallRefillIntervalChange(newIntervalMs) {
+    // Applies starting now, rather than leaving a countdown from the old
+    // interval running — much less confusing than a stale leftover timer.
+    setBallRefillIntervalMs(newIntervalMs);
+    nextRefillAtRef.current = Date.now() + newIntervalMs;
+    setSecondsUntilRefill(newIntervalMs / 1000);
+  }
+
   const caughtCount = pokemonList.filter((p) => p.caught).length;
+  const detailPokemon = pokemonList.find((p) => p.id === detailPokemonId) ?? null;
 
   return (
     <div className="app">
@@ -143,6 +166,14 @@ export default function App() {
                 </button>
               ))}
             </div>
+
+            <SettingsMenu
+              language={language}
+              speedMultiplier={speedMultiplier}
+              onSpeedMultiplierChange={setSpeedMultiplier}
+              ballRefillIntervalMs={ballRefillIntervalMs}
+              onBallRefillIntervalChange={handleBallRefillIntervalChange}
+            />
           </div>
         </div>
       </header>
@@ -157,6 +188,7 @@ export default function App() {
           secondsUntilRefill={secondsUntilRefill}
           onThrowBall={handleThrowBall}
           onMissBall={handleMissBall}
+          speedMultiplier={speedMultiplier}
         />
       )}
 
@@ -178,12 +210,19 @@ export default function App() {
                   pokemon={pokemon}
                   language={language}
                   onCatchClick={handleCatchButtonClick}
+                  onOpenDetail={(p) => setDetailPokemonId(p.id)}
                 />
               ))}
             </div>
           )}
         </>
       )}
+
+      <PokemonDetailModal
+        language={language}
+        pokemon={detailPokemon}
+        onClose={() => setDetailPokemonId(null)}
+      />
     </div>
   );
 }

@@ -47,13 +47,13 @@ function pickWeightedPokemon(pool) {
   return pool[pool.length - 1];
 }
 
-function speedStatToPxPerSecond(baseSpeed) {
+function speedStatToPxPerSecond(baseSpeed, speedMultiplier) {
   const clamped = Math.min(
     MAX_STAT_SPEED,
     Math.max(MIN_STAT_SPEED, baseSpeed ?? (MIN_STAT_SPEED + MAX_STAT_SPEED) / 2)
   );
   const ratio = (clamped - MIN_STAT_SPEED) / (MAX_STAT_SPEED - MIN_STAT_SPEED);
-  return MIN_SPEED_PX_S + ratio * (MAX_SPEED_PX_S - MIN_SPEED_PX_S);
+  return (MIN_SPEED_PX_S + ratio * (MAX_SPEED_PX_S - MIN_SPEED_PX_S)) * speedMultiplier;
 }
 
 function randomRespawnDelay() {
@@ -177,7 +177,7 @@ function oppositeEdgePoint(effRect, edge) {
   return { x: effRect.minX, y: lerpRandom(effRect.minY, effRect.maxY) };
 }
 
-function spawnCreature(pool, zoneRects, now) {
+function spawnCreature(pool, zoneRects, now, speedMultiplier) {
   const pokemon = pickWeightedPokemon(pool);
   const allowedZones = zonesForPokemon(pokemon);
   const zoneName = allowedZones[Math.floor(Math.random() * allowedZones.length)];
@@ -190,7 +190,7 @@ function spawnCreature(pool, zoneRects, now) {
     targetPoint.y - spawnPoint.y,
     targetPoint.x - spawnPoint.x
   );
-  const speed = speedStatToPxPerSecond(pokemon.baseSpeed);
+  const speed = speedStatToPxPerSecond(pokemon.baseSpeed, speedMultiplier);
 
   return {
     instanceId: nextInstanceId++,
@@ -217,6 +217,7 @@ export default function WildZone({
   secondsUntilRefill,
   onThrowBall,
   onMissBall,
+  speedMultiplier,
 }) {
   const zoneRef = useRef(null);
   const [zoneSize, setZoneSize] = useState({ width: 0, height: 0 });
@@ -227,6 +228,12 @@ export default function WildZone({
 
   const uncaughtRef = useRef([]);
   uncaughtRef.current = pokemonList.filter((p) => !p.caught);
+
+  // Read fresh at spawn time without making the simulation effect depend on
+  // it — changing this setting shouldn't tear down and restart every
+  // currently-alive Pokemon, only affect future spawns.
+  const speedMultiplierRef = useRef(speedMultiplier);
+  speedMultiplierRef.current = speedMultiplier;
 
   // The authoritative, mutable simulation state — updated in place every
   // frame. `creatures` (React state) is just a snapshot pushed once per
@@ -326,7 +333,8 @@ export default function WildZone({
         slotsRef.current[slotIndex] = spawnCreature(
           candidates,
           zoneRects,
-          performance.now()
+          performance.now(),
+          speedMultiplierRef.current
         );
       }, randomRespawnDelay());
     }

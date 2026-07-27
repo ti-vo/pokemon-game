@@ -65,12 +65,14 @@ function extractStats(statsArray) {
 }
 
 const upsertStatement = db.prepare(`
-  INSERT INTO pokemon (id, name, name_de, sprite_url, types, catch_rate, stats)
-  VALUES (@id, @name, @name_de, @sprite_url, @types, @catch_rate, @stats)
+  INSERT INTO pokemon (id, name, name_de, sprite_url, artwork_url, home_url, types, catch_rate, stats)
+  VALUES (@id, @name, @name_de, @sprite_url, @artwork_url, @home_url, @types, @catch_rate, @stats)
   ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     name_de = excluded.name_de,
     sprite_url = excluded.sprite_url,
+    artwork_url = excluded.artwork_url,
+    home_url = excluded.home_url,
     types = excluded.types,
     catch_rate = excluded.catch_rate,
     stats = excluded.stats
@@ -85,6 +87,8 @@ async function run() {
 
     const name = data.name;
     const spriteUrl = data.sprites?.front_default || null;
+    const artworkUrl = data.sprites?.other?.["official-artwork"]?.front_default || null;
+    const homeUrl = data.sprites?.other?.home?.front_default || null;
     const types = data.types.map((t) => t.type.name).join(",");
     const catchRate = calculateCatchRate(data.base_experience || 0);
     const stats = JSON.stringify(extractStats(data.stats));
@@ -94,6 +98,8 @@ async function run() {
       name,
       name_de: nameDe,
       sprite_url: spriteUrl,
+      artwork_url: artworkUrl,
+      home_url: homeUrl,
       types,
       catch_rate: catchRate,
       stats,
