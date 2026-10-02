@@ -1,4 +1,4 @@
-# Pokemon Catch Tracker
+# Pokemon Catching Game & Tracker
 
 A small full-stack project for learning agentic coding workflows: a Node/Express
 backend with a SQLite database, paired with a React (Vite) frontend. Users see
@@ -17,9 +17,16 @@ harder to catch). Later on: More realistic "catching" using Pokéball
 
 ## Features
 
-- Pokemon grid with sprites, names, and type badges
+- Two modes: **Gallery** (grid view with sprites, names, type badges) and
+  **Wild Zone** (Pokemon roam a sky/grass/water scene and must be clicked
+  to catch)
+- Three Poke Ball types (Poke Ball / Super Ball / Master Ball) with limited
+  counts that refill on a timer; ball choice affects catch odds
+- Custom ball cursor with a glow around Pokemon that can currently be caught
+- Pokemon detail view with official artwork and base stats
 - Catch mechanic: a random roll against a per-Pokemon catch rate
 - Persistent progress, stored in SQLite
+- Settings menu: adjustable Wild Zone speed and ball refill interval
 - English / German language toggle, including localized Pokemon names
   (fetched from the PokeAPI)
 
@@ -42,10 +49,15 @@ pokemon-fang-tracker/
 │   └── scripts/import-pokemon.js  # one-time import from the PokeAPI
 ├── frontend/
 │   └── src/
-│       ├── App.jsx             # top-level state, language toggle
-│       ├── api.js              # backend fetch calls
-│       ├── i18n.js             # EN/DE translations
-│       └── components/PokemonCard.jsx
+│       ├── App.jsx                     # top-level state, language toggle, tabs
+│       ├── api.js                      # backend fetch calls
+│       ├── i18n.js                     # EN/DE translations
+│       └── components/
+│           ├── PokemonCard.jsx         # Gallery grid card
+│           ├── PokemonDetailModal.jsx  # Pokemon detail/stats view
+│           ├── WildZone.jsx            # roaming-Pokemon catch mode
+│           ├── BallSelector.jsx        # Poke/Super/Master Ball picker
+│           └── SettingsMenu.jsx        # speed & refill settings
 └── CLAUDE.md                   # project context for Claude Code
 ```
 
@@ -80,13 +92,6 @@ the app to load any data.
 | GET    | `/api/pokemon`             | List all Pokemon with catch status    |
 | POST   | `/api/pokemon/:id/catch`   | Attempt to catch a Pokemon            |
 | GET    | `/api/health`               | Health check                          |
-
-## Roadmap / Ideas
-
-- [ ] Poke Ball selection (different catch-rate multipliers)
-- [ ] Timing-based "real" catch mini-game
-- [ ] Sorting / filtering the grid
-- [ ] Custom Poke Ball cursor on hover
 
 ## AI-Assisted Development
 
